@@ -1,13 +1,10 @@
-import React from 'react' // nạp thư viện react
-import ReactDOM from "react-dom/client"
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App'; // Import component App từ file App.js
 
-function App() {
-    return (
-        <div>
-            <h1>Xin chào anh em F8!</h1>
-        </div>
-    )
-}
-
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
