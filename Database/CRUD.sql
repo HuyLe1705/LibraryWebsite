@@ -433,3 +433,51 @@ BEGIN
     END
 END;
 GO
+
+-- Thủ tục 1 — sp_SearchBookByTitle
+CREATE PROCEDURE sp_SearchBookByTitle
+    @Keyword NVARCHAR(100)
+AS
+BEGIN
+    SELECT 
+        br.RecordID,
+        br.Title,
+        br.Publisher,
+        br.[Year],
+        a.Fullname AS AuthorName,
+        COUNT(CASE WHEN bc.[Status] = 'Available' THEN 1 END) AS AvailableCopies
+    FROM BibliographicRecord br
+    LEFT JOIN Viet v ON br.RecordID = v.RecordID
+    LEFT JOIN Author a ON v.AuthorID = a.SSN
+    LEFT JOIN [Book Copy] bc ON br.RecordID = bc.RecordID
+    WHERE br.Title LIKE '%' + @Keyword + '%'
+    GROUP BY 
+        br.RecordID,
+        br.Title,
+        br.Publisher,
+        br.[Year],
+        a.Fullname
+    ORDER BY br.Title ASC;
+END;
+GO
+-- Thủ tục 2 — sp_GetTopBorrowedBooks Thong ke 10 quyen sach được mượn nhiều nhất trong mot khoang thoi gian
+CREATE PROCEDURE sp_GetTopBorrowedBooks
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT TOP 10
+        br.RecordID,
+        br.Title,
+        COUNT(l.LoanID) AS BorrowCount
+    FROM Loan l
+    JOIN [Book Copy] bc ON l.BookID = bc.BookID
+    JOIN BibliographicRecord br ON bc.RecordID = br.RecordID
+    WHERE l.LoanDate BETWEEN @StartDate AND @EndDate
+    GROUP BY br.RecordID, br.Title
+    HAVING COUNT(l.LoanID) > 0
+    ORDER BY BorrowCount DESC, br.Title ASC;
+END;
+GO
