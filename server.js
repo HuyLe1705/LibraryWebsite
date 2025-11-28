@@ -166,6 +166,35 @@ app.delete("/api/books/:id", async (req, res) => {
   }
 });
 
+// API 6: Lọc sách theo thể loại (Gọi SP riêng)
+app.get("/api/books/filter-by-category", async (req, res) => {
+  try {
+    const { category } = req.query;
+    const pool = await sql.connect(dbConfig);
+
+    const result = await pool
+      .request()
+      .input("CategoryName", sql.NVarChar(100), category)
+      .execute("sp_FilterBooksByCategory");
+
+    res.json(result.recordset);
+  } catch (err) {
+    console.error("Lỗi lọc sách:", err);
+    res.status(500).send(err.message);
+  }
+});
+
+app.get("/api/categories", async (req, res) => {
+  try {
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request().query("SELECT Name FROM Category");
+    res.json(result.recordset);
+  } catch (err) {
+    console.error("Lỗi lấy danh mục:", err);
+    res.status(500).send(err.message);
+  }
+});
+
 // Khởi chạy server
 app.listen(PORT, () => {
   console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);

@@ -301,6 +301,87 @@ INSERT INTO Fine (FineID, Amount, Reason, [Status], HandlerID, LoanID, [Closing 
 ('F005', 200000.00, N'Mất sách', 'Unpaid', 'U0000003', 'L002', NULL, NULL); -- Đã sửa: Thêm NULL cho Closing Date và ActionDate
 GO
 
+-- Sửa thuộc tính Name của Category
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Thuoc]') AND type in (N'U'))
+DROP TABLE [Thuoc];
+
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Category]') AND type in (N'U'))
+DROP TABLE [Category];
+GO
+
+CREATE TABLE Category (
+    Name NVARCHAR(100) PRIMARY KEY, 
+    [Description] NVARCHAR(100)   
+);
+GO
+
+CREATE TABLE Thuoc (
+    CategoryName NVARCHAR(100) NOT NULL,
+    RecordID VARCHAR(10) NOT NULL,
+    PRIMARY KEY (CategoryName, RecordID),
+    FOREIGN KEY (CategoryName) REFERENCES Category(Name),
+    FOREIGN KEY (RecordID) REFERENCES BibliographicRecord(RecordID)
+);
+GO
+
+INSERT INTO Category (Name, [Description]) VALUES 
+(N'Lập trình', N'Sách công nghệ thông tin, code'),
+(N'Kinh tế', N'Sách tài chính, quản trị kinh doanh'),
+(N'Văn học', N'Tiểu thuyết, thơ ca, tản văn'),
+(N'Khoa Học Viễn Tưởng', N'Sách về vũ trụ, tương lai'),
+(N'Truyện Trinh Thám', N'Sách điều tra phá án, Sherlock Holmes'),
+(N'Ngoại ngữ', N'Sách học tiếng Anh, Nhật, Trung');
+
+INSERT INTO Thuoc (CategoryName, RecordID) VALUES
+(N'Lập trình', 'R001'),
+(N'Lập trình', 'R004'),
+(N'Kinh tế', 'R002'),
+(N'Truyện Trinh Thám', 'R003'),
+(N'Văn học', 'R005');
+GO
+
+
+-- Sửa kiểu dữ liệu tên tác giả 
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Viet]') AND type in (N'U'))
+DROP TABLE [Viet];
+
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Author]') AND type in (N'U'))
+DROP TABLE [Author];
+GO
+
+CREATE TABLE Author (
+    SSN VARCHAR(10) PRIMARY KEY,      
+    Biography NVARCHAR(MAX),         
+    Fullname NVARCHAR(100)            
+);
+GO
+
+-- 4. TẠO LẠI BẢNG VIET
+CREATE TABLE Viet (
+    AuthorID VARCHAR(10) NOT NULL,
+    RecordID VARCHAR(10) NOT NULL,
+    PRIMARY KEY (AuthorID, RecordID),
+    FOREIGN KEY (AuthorID) REFERENCES Author(SSN),
+    FOREIGN KEY (RecordID) REFERENCES BibliographicRecord(RecordID)
+);
+GO
+
+INSERT INTO Author (SSN, Biography, Fullname) VALUES
+('A001', N'Tác giả nổi tiếng về lĩnh vực kinh tế, đạt nhiều giải thưởng quốc tế.', N'Nguyễn Văn A'),
+('A002', N'Nhà văn chuyên viết truyện trinh thám ly kỳ, hấp dẫn.', N'Trần Thị B'),
+('A003', N'Chuyên gia lập trình và Cơ sở dữ liệu, giảng viên đại học.', N'Lê Văn C'),
+('A004', N'Tác giả sách khoa học viễn tưởng với trí tưởng tượng phong phú.', N'Phạm Minh D'),
+('A005', N'Tác giả chuyên viết sách thiếu nhi và truyện tranh.', N'Hoàng Thúy E');
+
+INSERT INTO Viet (AuthorID, RecordID) VALUES
+('A003', 'R001'), 
+('A001', 'R002'), 
+('A002', 'R003'), 
+('A003', 'R004'), 
+('A005', 'R005'); 
+GO
+
+
 -- =============================================
 -- 3. TAO CAC TRIGGER
 -- =============================================
@@ -594,3 +675,36 @@ BEGIN
     END CATCH
 END;
 GO
+
+CREATE OR ALTER PROCEDURE sp_FilterBooksByCategory
+    @CategoryName NVARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        br.RecordID,
+        br.Title,
+        br.Publisher,
+        br.[Year],
+        a.Fullname AS AuthorName,
+        COUNT(CASE WHEN bc.[Status] = 'Available' THEN 1 END) AS AvailableCopies
+    FROM BibliographicRecord br
+    -- Join bảng Thể loại (Thuoc)
+    JOIN Thuoc t ON br.RecordID = t.RecordID
+    -- Join các bảng khác để lấy thông tin hiển thị
+    LEFT JOIN Viet v ON br.RecordID = v.RecordID
+    LEFT JOIN Author a ON v.AuthorID = a.SSN
+    LEFT JOIN [Book Copy] bc ON br.RecordID = bc.RecordID
+    WHERE 
+        t.CategoryName = @CategoryName
+    GROUP BY 
+        br.RecordID,
+        br.Title,
+        br.Publisher,
+        br.[Year],
+        a.Fullname
+    ORDER BY br.Title ASC;
+END;
+GO
+
