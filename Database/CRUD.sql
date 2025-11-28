@@ -481,3 +481,116 @@ BEGIN
     ORDER BY BorrowCount DESC, br.Title ASC;
 END;
 GO
+
+CREATE PROCEDURE sp_UpdateBibliographicRecord
+    @RecordID VARCHAR(10),
+    @Title NVARCHAR(200),
+    @RefBookID VARCHAR(10) = NULL,
+    @Publisher NVARCHAR(100),
+    @Year INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. Kiem tra RecordID co ton tai khong
+    IF NOT EXISTS (SELECT 1 FROM BibliographicRecord WHERE RecordID = @RecordID)
+    BEGIN
+        RAISERROR(N'Lỗi: Không tìm thấy tài liệu có mã "%s" để cập nhật.', 16, 1, @RecordID);
+        RETURN;
+    END
+
+    -- 2. Kiem tra Tieu de
+    IF @Title IS NULL OR LTRIM(RTRIM(@Title)) = ''
+    BEGIN
+        RAISERROR(N'Lỗi: Tựa đề sách không được để trống khi cập nhật.', 16, 1);
+        RETURN;
+    END
+
+    -- 3. Kiem tra Nam xuat ban
+    IF @Year > (YEAR(GETDATE()) + 1)
+    BEGIN
+        RAISERROR(N'Lỗi: Năm xuất bản (%d) không hợp lệ.', 16, 1, @Year);
+        RETURN;
+    END
+
+    -- 4. Kiem tra RefBookID (khong duoc tham chieu chinh no va phai ton tai)
+    IF @RefBookID = @RecordID
+    BEGIN
+        RAISERROR(N'Lỗi: Sách không thể tự tham chiếu chính nó (RefBookID trùng RecordID).', 16, 1);
+        RETURN;
+    END
+
+    IF @RefBookID IS NOT NULL AND NOT EXISTS (SELECT 1 FROM BibliographicRecord WHERE RecordID = @RefBookID)
+    BEGIN
+        RAISERROR(N'Lỗi: Mã sách tham khảo mới "%s" không tồn tại.', 16, 1, @RefBookID);
+        RETURN;
+    END
+
+    -- 5. Thuc hien Update
+    UPDATE BibliographicRecord
+    SET Title = @Title,
+        RefBookID = @RefBookID,
+        Publisher = @Publisher,
+        [Year] = @Year
+    WHERE RecordID = @RecordID;
+
+    PRINT N'Cập nhật thông tin tài liệu thành công!';
+END;
+GO
+
+CREATE PROCEDURE sp_DeleteBibliographicRecord
+    @RecordID VARCHAR(10)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- 1. Kiem tra RecordID co ton tai khong
+    IF NOT EXISTS (SELECT 1 FROM BibliographicRecord WHERE RecordID = @RecordID)
+    BEGIN
+        RAISERROR(N'Lỗi: Không tìm thấy tài liệu có mã "%s" để xóa.', 16, 1, @RecordID);
+        RETURN;
+    END
+
+    -- 2. CHECK RANG BUOC 1: Co ban sao vat ly (Book Copy) nao khong?
+    IF EXISTS (SELECT 1 FROM [Book Copy] WHERE RecordID = @RecordID)
+    BEGIN
+        DECLARE @NumCopies INT;
+        SELECT @NumCopies = COUNT(*) FROM [Book Copy] WHERE RecordID = @RecordID;
+        
+        RAISERROR(N'Lỗi: Không thể xóa tài liệu này vì đang tồn tại %d bản sao (Book Copy) trong kho. Cần thanh lý sách trước.', 16, 1, @NumCopies);
+        RETURN;
+    END
+
+    -- 3. CHECK RANG BUOC 2: Co dang duoc sach khac tham chieu (RefBookID) khong?
+    IF EXISTS (SELECT 1 FROM BibliographicRecord WHERE RefBookID = @RecordID)
+    BEGIN
+        RAISERROR(N'Lỗi: Không thể xóa tài liệu này vì nó đang được dùng làm tài liệu tham khảo cho sách khác.', 16, 1);
+        RETURN;
+    END
+
+    -- 4. THUC HIEN XOA (Bao gom xoa cac bang phu thuoc truoc)
+    BEGIN TRANSACTION;
+    BEGIN TRY
+        -- Xoa lien ket Tac gia (Bang Viet)
+        DELETE FROM Viet WHERE RecordID = @RecordID;
+        
+        -- Xoa lien ket The loai (Bang Thuoc)
+        DELETE FROM Thuoc WHERE RecordID = @RecordID;
+        
+        -- Xoa lien ket Tu khoa (Bang Keywords)
+        DELETE FROM Keywords WHERE RecordID = @RecordID;
+
+        -- Cuoi cung: Xoa trong bang chinh BibliographicRecord
+        DELETE FROM BibliographicRecord WHERE RecordID = @RecordID;
+
+        COMMIT TRANSACTION;
+        PRINT N'Xóa tài liệu và các thông tin liên quan thành công!';
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+        DECLARE @ErrorMessage NVARCHAR(4000);
+        SET @ErrorMessage = ERROR_MESSAGE();
+        RAISERROR(N'Lỗi hệ thống khi xóa: %s', 16, 1, @ErrorMessage);
+    END CATCH
+END;
+GO
