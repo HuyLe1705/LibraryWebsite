@@ -9,6 +9,7 @@ const Header = () => {
         <header className="header">
             <div className="header-left">
                 <Link to="/" className="logo">
+                    {/* Lưu ý: Đảm bảo bạn có file ảnh này trong thư mục public/Image */}
                     <img src="/Image/logolib.png" alt="BK Library" />
                     <span>BK Library</span>
                 </Link>
@@ -21,17 +22,19 @@ const Header = () => {
                 <Link to="/search" className={location.pathname === '/search' ? 'active' : ''}>
                     Tra cứu sách
                 </Link>
-                <div className="dropdown">
-                    <span className="dropdown-title">Thủ thư ▼</span>
-                    <div className="dropdown-menu">
-                        <Link to="/manage-books">Quản lý sách (Nhập liệu)</Link>
-                        <Link to="/return">Quầy trả sách (Lưu hành)</Link>
-                    </div>
-                </div>
+                
+                {/* Đã thêm class active để highlight khi đang ở trang này */}
+                <Link to="/manage-books" className={location.pathname === '/manage-books' ? 'active' : ''}>
+                    Quản lý sách (Nhập liệu)
+                </Link>
+                <Link to="/return" className={location.pathname === '/return' ? 'active' : ''}>
+                    Quầy trả sách (Lưu hành)
+                </Link>
             </nav>
 
             <div className="header-right">
-                <button className="btn-login">Đăng nhập</button>
+                {/* ĐÃ SỬA: Thay chữ Đăng nhập thành Admin */}
+                <button className="btn-login">Admin</button>
             </div>
         </header>
     );

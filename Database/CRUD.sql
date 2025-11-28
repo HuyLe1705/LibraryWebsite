@@ -1,5 +1,6 @@
 USE master;
 GO
+
 -- Kiem tra neu DB LibraryDB ton tai thi xoa va tao lai
 IF EXISTS (SELECT name FROM sys.databases WHERE name = N'LibraryDB')
 BEGIN
@@ -17,7 +18,7 @@ GO
 -- 1. TAO SCHEMA (CAC BANG)
 -- =============================================
 
--- 1.1 CATALOGS (Branch, Manufacture, Author, Category, BibliographicRecord)
+-- 1.1 CATALOGS
 CREATE TABLE Branch (
     [Branch ID] VARCHAR(10) PRIMARY KEY,
     [Branch Name] NVARCHAR(100) NOT NULL,
@@ -31,14 +32,14 @@ CREATE TABLE Manufacture (
 );
 
 CREATE TABLE Author (
-    SSN VARCHAR(10) PRIMARY KEY,
-    Biography VARCHAR(100),
-    Fullname VARCHAR(100)
+    SSN VARCHAR(10) PRIMARY KEY,      
+    Biography NVARCHAR(MAX),         
+    Fullname NVARCHAR(100)            
 );
 
 CREATE TABLE Category (
-    Name VARCHAR(100) PRIMARY KEY,
-    [Description] VARCHAR(100)
+    Name NVARCHAR(100) PRIMARY KEY, 
+    [Description] NVARCHAR(100)   
 );
 
 CREATE TABLE BibliographicRecord (
@@ -50,20 +51,19 @@ CREATE TABLE BibliographicRecord (
     FOREIGN KEY (RefBookID) REFERENCES BibliographicRecord(RecordID)
 );
 
--- 1.2 USER & SUBTYPES (User, Admin, Student, Librarian)
+-- 1.2 USER & SUBTYPES
 CREATE TABLE [User] (
     UserID CHAR(8) PRIMARY KEY,
     Username VARCHAR(50) NOT NULL,
     [Password] VARCHAR(50) NOT NULL,
-    [First Name] VARCHAR(50), 
-    [Last Name] VARCHAR(50),
+    [First Name] NVARCHAR(50), 
+    [Last Name] NVARCHAR(50),
     Email VARCHAR(50),
     SSN CHAR(8),
     Birthday DATE,
-    [Address] VARCHAR(50),
+    [Address] NVARCHAR(50),
     UserType VARCHAR(50) NOT NULL,
     [Phone Number] VARCHAR(15),
-
     CONSTRAINT CHK_Email CHECK (Email LIKE '%_@__%.__%'),
     CONSTRAINT CHK_Password CHECK (LEN([Password]) BETWEEN 8 AND 16)
 );
@@ -88,7 +88,7 @@ CREATE TABLE Librarian (
     FOREIGN KEY ([Branch ID]) REFERENCES Branch([Branch ID])
 );
 
--- 1.3 BOOKS, COPIES & M-N RELATIONS (Book Copy, Keywords, Viet, Thuoc)
+-- 1.3 BOOKS, COPIES & M-N RELATIONS
 CREATE TABLE [Book Copy] (
     BookID VARCHAR(10) PRIMARY KEY,
     RecordID VARCHAR(10) NOT NULL,
@@ -96,7 +96,6 @@ CREATE TABLE [Book Copy] (
     [Branch ID] VARCHAR(10),
     ManufactureID VARCHAR(10),
     [Status] NVARCHAR(20),
-
     FOREIGN KEY (RecordID) REFERENCES BibliographicRecord(RecordID),
     FOREIGN KEY ([Branch ID]) REFERENCES Branch([Branch ID]),
     FOREIGN KEY (ManufactureID) REFERENCES Manufacture(ManufactureID)
@@ -104,7 +103,7 @@ CREATE TABLE [Book Copy] (
 
 CREATE TABLE Keywords (
     RecordID VARCHAR(10) NOT NULL,
-    Keyword VARCHAR(50) NOT NULL,
+    Keyword NVARCHAR(50) NOT NULL,
     PRIMARY KEY (RecordID, Keyword),
     FOREIGN KEY (RecordID) REFERENCES BibliographicRecord(RecordID)
 );
@@ -118,14 +117,14 @@ CREATE TABLE Viet (
 );
 
 CREATE TABLE Thuoc (
-    CategoryName VARCHAR(100) NOT NULL,
+    CategoryName NVARCHAR(100) NOT NULL,
     RecordID VARCHAR(10) NOT NULL,
     PRIMARY KEY (CategoryName, RecordID),
     FOREIGN KEY (CategoryName) REFERENCES Category(Name),
     FOREIGN KEY (RecordID) REFERENCES BibliographicRecord(RecordID)
 );
 
--- 1.4 CIRCULATION (Loan, Cart, Cart Contain, Fine)
+-- 1.4 CIRCULATION
 CREATE TABLE Cart (
     CartID VARCHAR(8) PRIMARY KEY,
     InitialDate DATE,
@@ -151,7 +150,6 @@ CREATE TABLE Loan (
     [Handler ID] CHAR(8) NOT NULL,
     BorrowerID CHAR(8) NOT NULL,
     BookID VARCHAR(10) NOT NULL,
-
     FOREIGN KEY ([Handler ID]) REFERENCES [User](UserID),
     FOREIGN KEY (BorrowerID) REFERENCES [User](UserID),
     FOREIGN KEY (BookID) REFERENCES [Book Copy](BookID)
@@ -160,26 +158,24 @@ CREATE TABLE Loan (
 CREATE TABLE Fine (
     FineID CHAR(8) PRIMARY KEY,
     Amount DECIMAL(10,2) NOT NULL,
-    Reason VARCHAR(100),
+    Reason NVARCHAR(100),
     [Status] VARCHAR(20) NOT NULL,
     [Closing Date] DATE,
     ActionDate DATE,
     HandlerID CHAR(8) NOT NULL,
     LoanID VARCHAR(8) NOT NULL,
-
     FOREIGN KEY (HandlerID) REFERENCES [User](UserID),
     FOREIGN KEY (LoanID) REFERENCES Loan(LoanID),
-
     CONSTRAINT CHK_FineAmount CHECK (Amount > 0),
     CONSTRAINT CHK_FineStatus CHECK ([Status] IN ('Paid', 'Unpaid'))
 );
 GO
 
 -- =============================================
--- 2. NHAP LIEU MAU (IT NHAT 5 HANG MOI BANG)
+-- 2. NHAP LIEU MAU (DA GOP VA SUA LOI)
 -- =============================================
 
--- 2.1 Catalog Data
+-- 2.1 Branch & Manufacture
 INSERT INTO Branch ([Branch ID], [Branch Name], [Address]) VALUES
 ('B001', N'Chi nhánh Trung Tâm', N'123 Đường Nguyễn Huệ, Quận 1, TP.HCM'),
 ('B002', N'Chi nhánh Thủ Đức', N'456 Đường Võ Văn Ngân, TP. Thủ Đức'),
@@ -194,28 +190,45 @@ INSERT INTO Manufacture (ManufactureID, ManuName, Contact) VALUES
 ('M004', N'In ấn Phương Đông', N'phuongdong@in.com'),
 ('M005', N'Nhà xuất bản Tổng hợp HCM', N'tonghop@nxb.vn');
 
+-- 2.2 Author (Đã gộp A001-A005 và A006-A010)
 INSERT INTO Author (SSN, Biography, Fullname) VALUES
-('A001', 'Tac gia noi tieng ve linh vuc kinh te', N'Nguyen Van A'),
-('A002', 'Nha van chuyen viet truyen trinh tham', N'Tran Thi B'),
-('A003', 'Chuyen gia lap trinh va Co so du lieu', N'Le Van C'),
-('A004', 'Tac gia sach khoa hoc vien tuong', N'Pham Minh D'),
-('A005', 'Tac gia sach thieu nhi', N'Hoang Thuy E');
+('A001', N'Tac gia noi tieng ve linh vuc kinh te', N'Nguyen Van A'),
+('A002', N'Nha van chuyen viet truyen trinh tham', N'Tran Thi B'),
+('A003', N'Chuyen gia lap trinh va Co so du lieu', N'Le Van C'),
+('A004', N'Tac gia sach khoa hoc vien tuong', N'Pham Minh D'),
+('A005', N'Tac gia sach thieu nhi', N'Hoang Thuy E'),
+('A006', N'Tác giả bộ truyện Harry Potter nổi tiếng toàn cầu.', N'J.K. Rowling'),
+('A007', N'Chuyên gia về Clean Code và kiến trúc phần mềm (Uncle Bob).', N'Robert C. Martin'),
+('A008', N'Nhà văn Nhật Bản đương đại nổi tiếng với Rừng Na Uy.', N'Haruki Murakami'),
+('A009', N'Giáo sư ngôn ngữ học, đồng tác giả sách học thuật.', N'Nguyễn Phương F'),
+('A010', N'Chuyên gia AI và Machine Learning.', N'Phạm Trí Tuệ');
 
+-- 2.3 Category
 INSERT INTO Category (Name, [Description]) VALUES
 (N'Lập trình', N'Sách liên quan đến phát triển phần mềm và code'),
 (N'Kinh tế', N'Sách về tài chính, quản trị, đầu tư'),
 (N'Truyện Trinh Thám', N'Sách về điều tra, phá án'),
 (N'Khoa Học Viễn Tưởng', N'Sách về tương lai, vũ trụ'),
-(N'Văn Học', N'Sách về thơ ca, tiểu thuyết');
+(N'Văn Học', N'Sách về thơ ca, tiểu thuyết'),
+(N'Ngoại ngữ', N'Sách học tiếng Anh, Nhật, Trung');
 
+-- 2.4 BibliographicRecord (Đã gộp R001-R005 và R006-R013)
 INSERT INTO BibliographicRecord (RecordID, Title, RefBookID, Publisher, [Year]) VALUES
 ('R001', N'Lập trình C# cơ bản', NULL, N'Nhà xuất bản Trẻ', 2022),
 ('R002', N'Bí mật tư duy triệu phú', NULL, N'Nhà xuất bản Tổng hợp HCM', 2018),
 ('R003', N'Sherlock Holmes: Cuộc điều tra cuối cùng', NULL, N'Nhà xuất bản Kim Đồng', 2015),
 ('R004', N'Lập trình Web với ASP.NET', 'R001', N'Nhà xuất bản Trẻ', 2023),
-('R005', N'Dế Mèn Phiêu Lưu Ký', NULL, N'Nhà xuất bản Kim Đồng', 2010);
+('R005', N'Dế Mèn Phiêu Lưu Ký', NULL, N'Nhà xuất bản Kim Đồng', 2010),
+('R006', N'Harry Potter và Hòn đá Phù thủy', NULL, N'Nhà xuất bản Trẻ', 2018),
+('R007', N'Harry Potter và Phòng chứa Bí mật', 'R006', N'Nhà xuất bản Trẻ', 2019),
+('R008', N'Harry Potter và Tên tù nhân ngục Azkaban', 'R007', N'Nhà xuất bản Trẻ', 2020),
+('R009', N'Clean Code: Mã sạch', NULL, N'Nhà xuất bản Khoa học Kỹ thuật', 2017),
+('R010', N'Clean Architecture: Kiến trúc sạch', NULL, N'Nhà xuất bản Khoa học Kỹ thuật', 2021),
+('R011', N'Rừng Na Uy', NULL, N'Nhà xuất bản Hội Nhà Văn', 2015),
+('R012', N'Nhập môn Trí tuệ nhân tạo & C#', NULL, N'Nhà xuất bản Đại học Quốc gia', 2024),
+('R013', N'Lập trình C# cơ bản (Tái bản lần 2)', 'R001', N'Nhà xuất bản Trẻ', 2024);
 
--- 2.2 User and Subtypes Data
+-- 2.5 User Data
 INSERT INTO [User] (UserID, Username, [Password], [First Name], [Last Name], Email, SSN, Birthday, [Address], UserType, [Phone Number]) VALUES
 ('U0000001', 'admin_lib', 'Admin@123', N'Nguyễn', N'Quản Trị', 'admin@lib.edu', '11111111', '1985-01-01', N'Hà Nội', 'Admin', '0901111111'),
 ('U0000002', 'lib_td', 'Librarian@1', N'Phạm', N'Thủ Thư 1', 'lib1@lib.edu', '22222222', '1990-05-15', N'TP. Thủ Đức', 'Librarian', '0902222222'),
@@ -224,58 +237,107 @@ INSERT INTO [User] (UserID, Username, [Password], [First Name], [Last Name], Ema
 ('U0000005', 'stu_cart', 'Student@345', N'Hoàng', N'Sinh Viên 2', 'stu2@hcmut.edu', '55555555', '2001-07-25', N'Quận 5', 'Student', '0905555555'),
 ('U0000006', 'stu_fine', 'Student@567', N'Võ', N'Sinh Viên 3', 'stu3@hcmut.edu', '66666666', '2002-12-10', N'Quận 7', 'Student', '0906666666');
 
-INSERT INTO [Admin] (UserID, AdminCode) VALUES
-('U0000001', 'AD001');
+INSERT INTO [Admin] (UserID, AdminCode) VALUES 
+('U0000001', 'AD001'),
+('U0000002', 'AD002'),
+('U0000003', 'AD003'),
+('U0000004', 'AD004'),
+('U0000005', 'AD005');
 
-INSERT INTO Librarian (UserID, [Branch ID]) VALUES
-('U0000002', 'B002'),
-('U0000003', 'B001');
+INSERT INTO Librarian (UserID, [Branch ID]) VALUES 
+('U0000006', 'B002'), 
+('U0000007', 'B001'),
+('U0000008', 'B003'),
+('U0000009', 'B004'),
+('U0000010', 'B005')
+;
 
 INSERT INTO Student (UserID, [Student ID], [Year]) VALUES
-('U0000004', '20100001', 2020),
-('U0000005', '21100002', 2021),
-('U0000006', '22100003', 2022);
+('U0000011', '20100001', 2020),
+('U0000012', '21100002', 2021),
+('U0000013', '22100003', 2022),
+('U0000014', '22100004', 2022),
+('U0000015', '23100005', 2023);
 
--- 2.3 Book Copy and M-N Relations Data
+-- 2.6 Book Copy (Đã gộp tất cả và sửa lỗi cú pháp)
 INSERT INTO [Book Copy] (BookID, RecordID, [Entry Date], [Branch ID], ManufactureID, [Status]) VALUES
-('C001', 'R001', '2023-01-10', 'B002', 'M001', 'CheckedOut'), -- Đã được mượn (L004)
+('C001', 'R001', '2023-01-10', 'B002', 'M001', 'CheckedOut'),
 ('C002', 'R001', '2023-01-10', 'B002', 'M001', 'Available'),
-('C003', 'R002', '2023-03-01', 'B001', 'M002', 'OnLoan'), -- Đang mượn (L002)
+('C003', 'R002', '2023-03-01', 'B001', 'M002', 'OnLoan'),
 ('C004', 'R002', '2023-03-01', 'B001', 'M002', 'Available'),
 ('C005', 'R003', '2022-11-15', 'B003', 'M003', 'Available'),
 ('C006', 'R003', '2022-11-15', 'B003', 'M003', 'Maintenance'),
-('C007', 'R004', '2024-02-20', 'B004', 'M004', 'OnLoan'), -- Đang mượn (L005)
+('C007', 'R004', '2024-02-20', 'B004', 'M004', 'OnLoan'),
 ('C008', 'R004', '2024-02-20', 'B004', 'M004', 'Available'),
 ('C009', 'R005', '2021-05-05', 'B005', 'M005', 'Available'),
-('C010', 'R005', '2021-05-05', 'B005', 'M005', 'Maintenance');
+('C010', 'R005', '2021-05-05', 'B005', 'M005', 'Maintenance'),
+('C011', 'R006', '2023-06-01', 'B001', 'M002', 'Available'),
+('C012', 'R006', '2023-06-01', 'B001', 'M002', 'OnLoan'),
+('C013', 'R006', '2023-06-05', 'B002', 'M002', 'Available'),
+('C014', 'R006', '2023-06-05', 'B002', 'M002', 'Available'),
+('C015', 'R006', '2023-07-01', 'B003', 'M002', 'Maintenance'),
+('C016', 'R006', '2023-07-01', 'B005', 'M002', 'Available'),
+('C017', 'R009', '2022-01-15', 'B002', 'M004', 'Available'),
+('C018', 'R009', '2022-01-15', 'B002', 'M004', 'OnLoan'),
+('C019', 'R009', '2022-02-20', 'B003', 'M004', 'CheckedOut'),
+('C020', 'R009', '2022-02-20', 'B003', 'M004', 'Available'),
+('C021', 'R011', '2021-12-12', 'B004', 'M005', 'Available'),
+('C022', 'R011', '2021-12-12', 'B004', 'M005', 'Available'),
+('C023', 'R011', '2022-03-10', 'B001', 'M005', 'Lost'),
+('C024', 'R012', '2024-10-01', 'B002', 'M001', 'Available'),
+('C025', 'R012', '2024-10-01', 'B002', 'M001', 'Available'),
+('C026', 'R012', '2024-10-05', 'B001', 'M001', 'OnLoan'),
+('C027', 'R007', '2023-08-15', 'B001', 'M002', 'Available'),
+('C028', 'R007', '2023-08-15', 'B002', 'M002', 'Available'),
+('C029', 'R008', '2023-09-20', 'B001', 'M002', 'Available'),
+('C030', 'R008', '2023-09-20', 'B005', 'M002', 'Available');
 
+-- 2.7 Keywords (Đã gộp và sửa cú pháp)
 INSERT INTO Keywords (RecordID, Keyword) VALUES
-('R001', N'Lập trình'),
-('R001', 'C#'),
+('R001', N'Lập trình'), ('R001', 'C#'),
 ('R002', N'Kinh tế'),
 ('R003', N'Trinh thám'),
-('R004', 'ASP.NET');
+('R004', 'ASP.NET'),
+('R006', 'Harry Potter'), ('R006', 'Magic'), ('R006', 'Hogwarts'),
+('R007', 'Harry Potter'), ('R007', 'Chamber of Secrets'),
+('R009', 'Clean Code'), ('R009', 'Java'), ('R009', 'Refactoring'),
+('R010', 'Architecture'), ('R010', 'Design Patterns'),
+('R012', 'AI'), ('R012', 'Machine Learning'), ('R012', 'C#'),
+('R011', 'Novel'), ('R011', 'Japan');
 
+-- 2.8 Relation VIET (Đã gộp)
 INSERT INTO Viet (AuthorID, RecordID) VALUES
-('A003', 'R001'),
-('A001', 'R002'),
-('A002', 'R003'),
-('A003', 'R004'),
-('A005', 'R005');
+('A003', 'R001'), ('A001', 'R002'), ('A002', 'R003'), ('A003', 'R004'), ('A005', 'R005'),
+('A006', 'R006'), ('A006', 'R007'), ('A006', 'R008'),
+('A007', 'R009'), ('A007', 'R010'),
+('A008', 'R011'),
+('A003', 'R012'), ('A010', 'R012'),
+('A003', 'R013');
 
+-- 2.9 Relation THUOC (Đã gộp và sửa cú pháp)
 INSERT INTO Thuoc (CategoryName, RecordID) VALUES
 (N'Lập trình', 'R001'),
 (N'Kinh tế', 'R002'),
 (N'Truyện Trinh Thám', 'R003'),
 (N'Lập trình', 'R004'),
-(N'Văn Học', 'R005');
+(N'Văn Học', 'R005'),
+(N'Văn học', 'R006'),
+(N'Văn học', 'R007'),
+(N'Văn học', 'R008'),
+(N'Ngoại ngữ', 'R006'),
+(N'Lập trình', 'R009'),
+(N'Lập trình', 'R010'),
+(N'Văn học', 'R011'),
+(N'Lập trình', 'R012'),
+(N'Khoa Học Viễn Tưởng', 'R012'),
+(N'Lập trình', 'R013');
 
--- 2.4 Circulation Data
+-- 2.10 Circulation Data
 INSERT INTO Loan (LoanID, LoanDate, [Due Date], ReturnDate, [Status], [Handler ID], BorrowerID, BookID) VALUES
-('L001', '2024-10-01', '2024-10-15', '2024-10-14', 'Returned', 'U0000003', 'U0000004', 'C002'), -- Fixed BookID
+('L001', '2024-10-01', '2024-10-15', '2024-10-14', 'Returned', 'U0000003', 'U0000004', 'C002'),
 ('L002', '2024-10-20', '2024-11-03', NULL, 'OnLoan', 'U0000003', 'U0000004', 'C003'),
-('L003', '2024-10-10', '2024-10-24', '2024-11-05', 'Returned', 'U0000002', 'U0000006', 'C004'), -- Fixed BookID, Returned late
-('L004', '2024-09-01', '2024-09-15', NULL, 'Overdue', 'U0000002', 'U0000006', 'C001'), -- Quá hạn, cần tạo Fine
+('L003', '2024-10-10', '2024-10-24', '2024-11-05', 'Returned', 'U0000002', 'U0000006', 'C004'),
+('L004', '2024-09-01', '2024-09-15', NULL, 'Overdue', 'U0000002', 'U0000006', 'C001'),
 ('L005', '2024-11-01', '2024-11-15', NULL, 'OnLoan', 'U0000003', 'U0000004', 'C007');
 
 INSERT INTO Cart (CartID, InitialDate, [Status], UserID) VALUES
@@ -286,101 +348,15 @@ INSERT INTO Cart (CartID, InitialDate, [Status], UserID) VALUES
 ('CT005', '2024-11-19', 'Active', 'U0000004');
 
 INSERT INTO [Cart Contain] (CartID, BookID) VALUES
-('CT001', 'C002'),
-('CT001', 'C004'),
-('CT002', 'C005'),
-('CT003', 'C008'),
-('CT005', 'C009');
+('CT001', 'C002'), ('CT001', 'C004'), ('CT002', 'C005'), ('CT003', 'C008'), ('CT005', 'C009');
 
--- LỖI ĐÃ ĐƯỢC SỬA: Thêm giá trị NULL cho cột [Closing Date] ở hàng 4 và 5 để khớp với 7 cột đã khai báo.
 INSERT INTO Fine (FineID, Amount, Reason, [Status], HandlerID, LoanID, [Closing Date], ActionDate) VALUES
 ('F001', 100000.00, N'Hư hỏng nhẹ bìa sách', 'Paid', 'U0000002', 'L001', '2024-10-14', '2024-10-14'),
 ('F002', 50000.00, N'Trả sách quá hạn 1 ngày', 'Paid', 'U0000002', 'L003', '2024-11-05', '2024-11-05'),
 ('F003', 20000.00, N'Mất thẻ thư viện', 'Paid', 'U0000001', 'L001', '2024-10-14', '2024-10-14'),
-('F004', 50000.00, N'Trả sách quá hạn', 'Unpaid', 'U0000002', 'L004', NULL, NULL), -- Đã sửa: Thêm NULL cho Closing Date và ActionDate
-('F005', 200000.00, N'Mất sách', 'Unpaid', 'U0000003', 'L002', NULL, NULL); -- Đã sửa: Thêm NULL cho Closing Date và ActionDate
+('F004', 50000.00, N'Trả sách quá hạn', 'Unpaid', 'U0000002', 'L004', NULL, NULL),
+('F005', 200000.00, N'Mất sách', 'Unpaid', 'U0000003', 'L002', NULL, NULL);
 GO
-
--- Sửa thuộc tính Name của Category
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Thuoc]') AND type in (N'U'))
-DROP TABLE [Thuoc];
-
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Category]') AND type in (N'U'))
-DROP TABLE [Category];
-GO
-
-CREATE TABLE Category (
-    Name NVARCHAR(100) PRIMARY KEY, 
-    [Description] NVARCHAR(100)   
-);
-GO
-
-CREATE TABLE Thuoc (
-    CategoryName NVARCHAR(100) NOT NULL,
-    RecordID VARCHAR(10) NOT NULL,
-    PRIMARY KEY (CategoryName, RecordID),
-    FOREIGN KEY (CategoryName) REFERENCES Category(Name),
-    FOREIGN KEY (RecordID) REFERENCES BibliographicRecord(RecordID)
-);
-GO
-
-INSERT INTO Category (Name, [Description]) VALUES 
-(N'Lập trình', N'Sách công nghệ thông tin, code'),
-(N'Kinh tế', N'Sách tài chính, quản trị kinh doanh'),
-(N'Văn học', N'Tiểu thuyết, thơ ca, tản văn'),
-(N'Khoa Học Viễn Tưởng', N'Sách về vũ trụ, tương lai'),
-(N'Truyện Trinh Thám', N'Sách điều tra phá án, Sherlock Holmes'),
-(N'Ngoại ngữ', N'Sách học tiếng Anh, Nhật, Trung');
-
-INSERT INTO Thuoc (CategoryName, RecordID) VALUES
-(N'Lập trình', 'R001'),
-(N'Lập trình', 'R004'),
-(N'Kinh tế', 'R002'),
-(N'Truyện Trinh Thám', 'R003'),
-(N'Văn học', 'R005');
-GO
-
-
--- Sửa kiểu dữ liệu tên tác giả 
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Viet]') AND type in (N'U'))
-DROP TABLE [Viet];
-
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[Author]') AND type in (N'U'))
-DROP TABLE [Author];
-GO
-
-CREATE TABLE Author (
-    SSN VARCHAR(10) PRIMARY KEY,      
-    Biography NVARCHAR(MAX),         
-    Fullname NVARCHAR(100)            
-);
-GO
-
--- 4. TẠO LẠI BẢNG VIET
-CREATE TABLE Viet (
-    AuthorID VARCHAR(10) NOT NULL,
-    RecordID VARCHAR(10) NOT NULL,
-    PRIMARY KEY (AuthorID, RecordID),
-    FOREIGN KEY (AuthorID) REFERENCES Author(SSN),
-    FOREIGN KEY (RecordID) REFERENCES BibliographicRecord(RecordID)
-);
-GO
-
-INSERT INTO Author (SSN, Biography, Fullname) VALUES
-('A001', N'Tác giả nổi tiếng về lĩnh vực kinh tế, đạt nhiều giải thưởng quốc tế.', N'Nguyễn Văn A'),
-('A002', N'Nhà văn chuyên viết truyện trinh thám ly kỳ, hấp dẫn.', N'Trần Thị B'),
-('A003', N'Chuyên gia lập trình và Cơ sở dữ liệu, giảng viên đại học.', N'Lê Văn C'),
-('A004', N'Tác giả sách khoa học viễn tưởng với trí tưởng tượng phong phú.', N'Phạm Minh D'),
-('A005', N'Tác giả chuyên viết sách thiếu nhi và truyện tranh.', N'Hoàng Thúy E');
-
-INSERT INTO Viet (AuthorID, RecordID) VALUES
-('A003', 'R001'), 
-('A001', 'R002'), 
-('A002', 'R003'), 
-('A003', 'R004'), 
-('A005', 'R005'); 
-GO
-
 
 -- =============================================
 -- 3. TAO CAC TRIGGER
@@ -393,14 +369,10 @@ AFTER INSERT, UPDATE
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    -- Chi kich hoat khi Status la 'Overdue'
     IF EXISTS (SELECT 1 FROM inserted WHERE [Status] = 'Overdue')
     BEGIN
-        -- Insert vao bang Fine nhung LoanID chua co trong bang Fine
         INSERT INTO Fine (FineID, Amount, Reason, [Status], HandlerID, LoanID)
         SELECT 
-            -- Tao FineID la F + LoanID
             'F' + i.LoanID, 
             50000, 
             N'Trả sách quá hạn',
@@ -421,8 +393,6 @@ AFTER INSERT
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    -- Kiem tra xem co cuon sach nao vua them vao gio ma trang thai khong 'Available'
     IF EXISTS (
         SELECT 1
         FROM inserted AS i
@@ -430,7 +400,6 @@ BEGIN
         WHERE bc.[Status] <> 'Available'
     )
     BEGIN
-        -- Phat hien vi pham, huy giao dich
         RAISERROR (N'Sách này hiện không có sẵn để thêm vào giỏ. (Đã có người mượn hoặc đang bảo trì)', 16, 1);
         ROLLBACK TRANSACTION;
         RETURN;
@@ -447,7 +416,6 @@ BEGIN
     SET NOCOUNT ON;
     IF UPDATE([Status])
     BEGIN
-        -- Truong hop 1: Co gang set 'Available' trong khi sach van dang duoc muon
         IF EXISTS (
             SELECT 1
             FROM inserted i
@@ -460,7 +428,6 @@ BEGIN
             RETURN;
         END
 
-        -- Truong hop 2: Co gang set 'CheckedOut' ma khong co Loan
         IF EXISTS (
             SELECT 1
             FROM inserted i
@@ -515,7 +482,11 @@ BEGIN
 END;
 GO
 
--- Thủ tục 1 — sp_SearchBookByTitle
+-- =============================================
+-- 4. TAO STORED PROCEDURES
+-- =============================================
+
+-- sp_SearchBookByTitle
 CREATE PROCEDURE sp_SearchBookByTitle
     @Keyword NVARCHAR(100)
 AS
@@ -541,14 +512,14 @@ BEGIN
     ORDER BY br.Title ASC;
 END;
 GO
--- Thủ tục 2 — sp_GetTopBorrowedBooks Thong ke 10 quyen sach được mượn nhiều nhất trong mot khoang thoi gian
+
+-- sp_GetTopBorrowedBooks
 CREATE PROCEDURE sp_GetTopBorrowedBooks
     @StartDate DATE,
     @EndDate DATE
 AS
 BEGIN
     SET NOCOUNT ON;
-
     SELECT TOP 10
         br.RecordID,
         br.Title,
@@ -563,6 +534,7 @@ BEGIN
 END;
 GO
 
+-- sp_UpdateBibliographicRecord
 CREATE PROCEDURE sp_UpdateBibliographicRecord
     @RecordID VARCHAR(10),
     @Title NVARCHAR(200),
@@ -572,98 +544,72 @@ CREATE PROCEDURE sp_UpdateBibliographicRecord
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    -- 1. Kiem tra RecordID co ton tai khong
     IF NOT EXISTS (SELECT 1 FROM BibliographicRecord WHERE RecordID = @RecordID)
     BEGIN
         RAISERROR(N'Lỗi: Không tìm thấy tài liệu có mã "%s" để cập nhật.', 16, 1, @RecordID);
         RETURN;
     END
-
-    -- 2. Kiem tra Tieu de
     IF @Title IS NULL OR LTRIM(RTRIM(@Title)) = ''
     BEGIN
         RAISERROR(N'Lỗi: Tựa đề sách không được để trống khi cập nhật.', 16, 1);
         RETURN;
     END
-
-    -- 3. Kiem tra Nam xuat ban
     IF @Year > (YEAR(GETDATE()) + 1)
     BEGIN
         RAISERROR(N'Lỗi: Năm xuất bản (%d) không hợp lệ.', 16, 1, @Year);
         RETURN;
     END
-
-    -- 4. Kiem tra RefBookID (khong duoc tham chieu chinh no va phai ton tai)
     IF @RefBookID = @RecordID
     BEGIN
         RAISERROR(N'Lỗi: Sách không thể tự tham chiếu chính nó (RefBookID trùng RecordID).', 16, 1);
         RETURN;
     END
-
     IF @RefBookID IS NOT NULL AND NOT EXISTS (SELECT 1 FROM BibliographicRecord WHERE RecordID = @RefBookID)
     BEGIN
         RAISERROR(N'Lỗi: Mã sách tham khảo mới "%s" không tồn tại.', 16, 1, @RefBookID);
         RETURN;
     END
 
-    -- 5. Thuc hien Update
     UPDATE BibliographicRecord
     SET Title = @Title,
         RefBookID = @RefBookID,
         Publisher = @Publisher,
         [Year] = @Year
     WHERE RecordID = @RecordID;
-
     PRINT N'Cập nhật thông tin tài liệu thành công!';
 END;
 GO
 
+-- sp_DeleteBibliographicRecord
 CREATE PROCEDURE sp_DeleteBibliographicRecord
     @RecordID VARCHAR(10)
 AS
 BEGIN
     SET NOCOUNT ON;
-    
-    -- 1. Kiem tra RecordID co ton tai khong
     IF NOT EXISTS (SELECT 1 FROM BibliographicRecord WHERE RecordID = @RecordID)
     BEGIN
         RAISERROR(N'Lỗi: Không tìm thấy tài liệu có mã "%s" để xóa.', 16, 1, @RecordID);
         RETURN;
     END
-
-    -- 2. CHECK RANG BUOC 1: Co ban sao vat ly (Book Copy) nao khong?
     IF EXISTS (SELECT 1 FROM [Book Copy] WHERE RecordID = @RecordID)
     BEGIN
         DECLARE @NumCopies INT;
         SELECT @NumCopies = COUNT(*) FROM [Book Copy] WHERE RecordID = @RecordID;
-        
         RAISERROR(N'Lỗi: Không thể xóa tài liệu này vì đang tồn tại %d bản sao (Book Copy) trong kho. Cần thanh lý sách trước.', 16, 1, @NumCopies);
         RETURN;
     END
-
-    -- 3. CHECK RANG BUOC 2: Co dang duoc sach khac tham chieu (RefBookID) khong?
     IF EXISTS (SELECT 1 FROM BibliographicRecord WHERE RefBookID = @RecordID)
     BEGIN
         RAISERROR(N'Lỗi: Không thể xóa tài liệu này vì nó đang được dùng làm tài liệu tham khảo cho sách khác.', 16, 1);
         RETURN;
     END
 
-    -- 4. THUC HIEN XOA (Bao gom xoa cac bang phu thuoc truoc)
     BEGIN TRANSACTION;
     BEGIN TRY
-        -- Xoa lien ket Tac gia (Bang Viet)
         DELETE FROM Viet WHERE RecordID = @RecordID;
-        
-        -- Xoa lien ket The loai (Bang Thuoc)
         DELETE FROM Thuoc WHERE RecordID = @RecordID;
-        
-        -- Xoa lien ket Tu khoa (Bang Keywords)
         DELETE FROM Keywords WHERE RecordID = @RecordID;
-
-        -- Cuoi cung: Xoa trong bang chinh BibliographicRecord
         DELETE FROM BibliographicRecord WHERE RecordID = @RecordID;
-
         COMMIT TRANSACTION;
         PRINT N'Xóa tài liệu và các thông tin liên quan thành công!';
     END TRY
@@ -676,12 +622,12 @@ BEGIN
 END;
 GO
 
+-- sp_FilterBooksByCategory
 CREATE OR ALTER PROCEDURE sp_FilterBooksByCategory
     @CategoryName NVARCHAR(100)
 AS
 BEGIN
     SET NOCOUNT ON;
-
     SELECT 
         br.RecordID,
         br.Title,
@@ -690,9 +636,7 @@ BEGIN
         a.Fullname AS AuthorName,
         COUNT(CASE WHEN bc.[Status] = 'Available' THEN 1 END) AS AvailableCopies
     FROM BibliographicRecord br
-    -- Join bảng Thể loại (Thuoc)
     JOIN Thuoc t ON br.RecordID = t.RecordID
-    -- Join các bảng khác để lấy thông tin hiển thị
     LEFT JOIN Viet v ON br.RecordID = v.RecordID
     LEFT JOIN Author a ON v.AuthorID = a.SSN
     LEFT JOIN [Book Copy] bc ON br.RecordID = bc.RecordID
@@ -707,4 +651,3 @@ BEGIN
     ORDER BY br.Title ASC;
 END;
 GO
-

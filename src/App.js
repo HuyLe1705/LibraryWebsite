@@ -6,26 +6,21 @@ import BookManagement from './Component/Books/BookManagement';
 import CirculationDesk from './Component/Circulation/CirculationDesk';
 import Header from './Component/header/header';
 import Footer from './Component/footer/footer'
-
+import Homepage from './Routes/hompage';
 function App() {
   return (
     <Router>
       <div className="App">
         <Header/>
         
-        <nav style={{ padding: 10, borderBottom: '1px solid #ccc' }}>
-            <Link to="/" style={{ marginRight: 10 }}>Trang chủ</Link>
-            <Link to="/search" style={{ marginRight: 10 }}>Tra cứu</Link>
-            <Link to="/manage-books" style={{ marginRight: 10 }}>Quản lý Sách</Link>
-            <Link to="/return">Trả sách</Link>
-        </nav>
+       
 
         <div className="content">
             <Routes>
                 <Route path="/search" element={<BookCatalog />} />
                 <Route path="/manage-books" element={<BookManagement />} />
                 <Route path="/return" element={<CirculationDesk />} />
-                <Route path="/" element={<h2>Chào mừng đến với Thư viện BK</h2>} />
+                <Route path="/" element={<Homepage />} />
             </Routes>
         </div>
 

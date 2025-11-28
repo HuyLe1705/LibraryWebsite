@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-// --- CSS ĐÃ ĐƯỢC FIX (Chứa z-index và overflow chuẩn) ---
+// --- CSS ĐÃ ĐƯỢC FIX + THÊM PHÂN TRANG ---
 const fixedStyles = `
 :root {
   --primary-color: #4361ee;
@@ -23,7 +23,6 @@ const fixedStyles = `
   background-color: var(--white);
   border-radius: 16px;
   box-shadow: var(--shadow);
-  /* QUAN TRỌNG: Cho phép menu chòi ra ngoài */
   overflow: visible !important; 
 }
 
@@ -46,7 +45,6 @@ h2 {
   padding: 15px;
   border-radius: 12px;
   flex-wrap: wrap;
-  /* QUAN TRỌNG: Không được ẩn nội dung thừa */
   overflow: visible !important; 
 }
 
@@ -91,10 +89,10 @@ h2 {
   background-color: var(--primary-hover);
 }
 
-/* --- FILTER (FIXED) --- */
+/* --- FILTER --- */
 .filter-wrapper {
-  position: relative; /* Để menu con bám theo */
-  z-index: 1000;      /* Nổi lên trên các thành phần khác */
+  position: relative;
+  z-index: 1000;
 }
 
 .btn-filter {
@@ -116,18 +114,15 @@ h2 {
   background-color: #eff3ff;
 }
 
-/* MENU DROPDOWN - Đã sửa lỗi hiển thị */
 .dropdown-menu {
   position: absolute;
-  top: 110%; /* Cách nút một chút */
+  top: 110%;
   right: 0;
   width: 240px;
   background: var(--white);
   border-radius: 10px;
   padding: 8px;
   border: 1px solid #eee;
-  
-  /* CÁC DÒNG QUAN TRỌNG ĐỂ HIỂN THỊ */
   z-index: 99999 !important; 
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
   display: block;
@@ -182,6 +177,7 @@ h2 {
   overflow-x: auto;
   border-radius: 10px;
   border: 1px solid #eee;
+  min-height: 300px; /* Giữ chiều cao tối thiểu để tránh giật layout khi ít sách */
 }
 .book-table {
   width: 100%;
@@ -256,6 +252,60 @@ h2 {
   color: white;
 }
 
+/* --- PAGINATION (NEW) --- */
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 25px;
+  padding-top: 15px;
+  border-top: 1px solid #f1f1f1;
+}
+
+.btn-page {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  background: white;
+  color: var(--text-dark);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-page:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: #f8f9ff;
+}
+
+.btn-page.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+}
+
+.btn-page:disabled {
+  background: #f8f9fa;
+  color: #ccc;
+  cursor: not-allowed;
+  border-color: #eee;
+}
+
+.page-info {
+  font-size: 14px;
+  color: var(--text-light);
+  margin: 0 10px;
+}
+
 /* --- MODAL --- */
 .modal-overlay {
   position: fixed;
@@ -318,6 +368,8 @@ const Icons = {
   Edit: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>,
   Trash: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>,
   Check: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
+  ChevronLeft: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>,
+  ChevronRight: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>,
 };
 
 // --- MODAL COMPONENT ---
@@ -386,6 +438,10 @@ const BookCatalog = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentBook, setCurrentBook] = useState(null);
 
+  // --- STATE PHÂN TRANG (MỚI) ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5; // Số sách mỗi trang
+
   // --- 1. INITIAL LOAD (Chỉ chạy 1 lần) ---
   useEffect(() => {
     // Load danh mục
@@ -398,24 +454,18 @@ const BookCatalog = () => {
     fetchBooks("");
   }, []);
 
-  // --- 2. LOGIC CLICK OUTSIDE (Đã sửa lỗi xung đột) ---
+  // --- 2. LOGIC CLICK OUTSIDE ---
   useEffect(() => {
-    // Nếu menu đang đóng thì thôi, không cần lắng nghe
     if (!isFilterOpen) return;
-
     const handleClickOutside = (event) => {
-      // Nếu click vào trong vùng filter thì không đóng
       if (filterRef.current && filterRef.current.contains(event.target)) {
         return;
       }
-      // Click ra ngoài thì đóng
       setIsFilterOpen(false);
     };
-
-    // Dùng sự kiện click thay vì mousedown để đồng bộ
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
-  }, [isFilterOpen]); // <--- Dependency quan trọng
+  }, [isFilterOpen]);
 
   // --- API CALLS ---
   const fetchBooks = async (searchKey) => {
@@ -424,6 +474,7 @@ const BookCatalog = () => {
       if (!response.ok) throw new Error("Lỗi kết nối");
       const data = await response.json();
       setBooks(data);
+      setCurrentPage(1); // Reset về trang 1 khi tìm kiếm mới
     } catch (error) {
       console.error("Lỗi:", error);
     }
@@ -437,15 +488,15 @@ const BookCatalog = () => {
   const handleFilterByCategory = async (categoryName) => {
     console.log("Đang lọc:", categoryName);
     setCurrentFilter(categoryName);
-    setIsFilterOpen(false); // Đóng menu sau khi chọn
+    setIsFilterOpen(false);
     setKeyword("");
 
     try {
-      // Encode tên để tránh lỗi ký tự đặc biệt
       const url = `http://localhost:5000/api/books/filter-by-category?category=${encodeURIComponent(categoryName)}`;
       const res = await fetch(url);
       const data = await res.json();
       setBooks(data);
+      setCurrentPage(1); // Reset về trang 1 khi lọc
     } catch (err) {
       console.error(err);
     }
@@ -474,6 +525,8 @@ const BookCatalog = () => {
       if (!response.ok) throw new Error(await response.text());
       alert("Cập nhật thành công!");
       setIsModalOpen(false);
+      
+      // Refresh dữ liệu
       if (currentFilter) handleFilterByCategory(currentFilter);
       else fetchBooks(keyword);
     } catch (error) {
@@ -495,9 +548,26 @@ const BookCatalog = () => {
     }
   };
 
+  // --- LOGIC PHÂN TRANG (MỚI) ---
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentBooks = books.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(books.length / itemsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  };
+
   return (
     <>
-      {/* Inject CSS đã fix vào đây */}
       <style>{fixedStyles}</style>
 
       <div className="catalog-container">
@@ -522,7 +592,7 @@ const BookCatalog = () => {
             <button
               className={`btn-filter ${currentFilter ? "active" : ""}`}
               onClick={(e) => {
-                e.stopPropagation(); // <--- FIX QUAN TRỌNG: Ngăn chặn click lan ra document
+                e.stopPropagation();
                 setIsFilterOpen(!isFilterOpen);
               }}
             >
@@ -579,7 +649,8 @@ const BookCatalog = () => {
                   </td>
                 </tr>
               ) : (
-                books.map((book) => (
+                // LƯU Ý: Dùng currentBooks thay vì books
+                currentBooks.map((book) => (
                   <tr key={book.RecordID}>
                     <td style={{ fontWeight: "bold" }}>{book.RecordID}</td>
                     <td>
@@ -607,6 +678,40 @@ const BookCatalog = () => {
             </tbody>
           </table>
         </div>
+
+        {/* --- PAGINATION CONTROLS (MỚI) --- */}
+        {books.length > 0 && (
+          <div className="pagination-wrapper">
+            <button 
+              className="btn-page" 
+              onClick={handlePrevPage} 
+              disabled={currentPage === 1}
+              title="Trang trước"
+            >
+              <Icons.ChevronLeft />
+            </button>
+            
+            {/* Tạo mảng số trang để render */}
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i + 1}
+                className={`btn-page ${currentPage === i + 1 ? "active" : ""}`}
+                onClick={() => handlePageChange(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
+
+            <button 
+              className="btn-page" 
+              onClick={handleNextPage} 
+              disabled={currentPage === totalPages}
+              title="Trang sau"
+            >
+              <Icons.ChevronRight />
+            </button>
+          </div>
+        )}
 
         <EditBookModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} book={currentBook} onSave={handleSaveUpdate} />
       </div>
